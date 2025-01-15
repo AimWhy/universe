@@ -1,0 +1,113 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "command": "npm run nx",
+      "name": "Run nx",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run commit",
+      "name": "Run commit",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run docs",
+      "name": "Run docs",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run e2e:test",
+      "name": "Run e2e:test",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run lint",
+      "name": "Run lint",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run test",
+      "name": "Run test",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run build",
+      "name": "Run build",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run lint-fix",
+      "name": "Run lint-fix",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run trigger-release",
+      "name": "Run trigger-release",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run serve:next",
+      "name": "Run serve:next",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run serve:website",
+      "name": "Run serve:website",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run build:website",
+      "name": "Run build:website",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run extract-i18n:website",
+      "name": "Run extract-i18n:website",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run postinstall",
+      "name": "Run postinstall",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run sync:types:webpack",
+      "name": "Run sync:types:webpack",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run sync:pullMFTypes",
+      "name": "Run sync:pullMFTypes",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run app:next:dev",
+      "name": "Run app:next:dev",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "npm run app:next:prod",
+      "name": "Run app:next:prod",
+      "request": "launch",
+      "type": "node-terminal"
+    }
+  ]
+}

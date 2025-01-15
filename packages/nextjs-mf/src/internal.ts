@@ -1,26 +1,66 @@
-import type { Compiler } from 'webpack';
-import type {
-  ModuleFederationPluginOptions,
-  Shared,
-  SharedConfig,
-  SharedObject,
-} from '@module-federation/utilities';
+import type { sharePlugin } from '@module-federation/sdk';
 
-import path from 'path';
-
-import { isRequiredVersion } from 'webpack/lib/sharing/utils';
-import { parseOptions } from 'webpack/lib/container/options';
-
-import {
-  extractUrlAndGlobal,
-  createDelegatedModule,
-} from '@module-federation/utilities';
-
-// the share scope we attach by default
-// in hosts we re-key them to prevent webpack moving the modules into their own chunks (cause eager error)
-// in remote these are marked as import:false as we always expect the host to prove them
-export const DEFAULT_SHARE_SCOPE: SharedObject = {
+/**
+ * @typedef SharedObject
+ * @type {object}
+ * @property {object} [key] - The key representing the shared object's package name.
+ * @property {boolean} key.singleton - Whether the shared object should be a singleton.
+ * @property {boolean} key.requiredVersion - Whether a specific version of the shared object is required.
+ * @property {boolean} key.eager - Whether the shared object should be eagerly loaded.
+ * @property {boolean} key.import - Whether the shared object should be imported or not.
+ */
+export const DEFAULT_SHARE_SCOPE: sharePlugin.SharedObject = {
+  'next/dynamic': {
+    requiredVersion: undefined,
+    singleton: true,
+    import: undefined,
+  },
+  'next/head': {
+    requiredVersion: undefined,
+    singleton: true,
+    import: undefined,
+  },
+  'next/link': {
+    requiredVersion: undefined,
+    singleton: true,
+    import: undefined,
+  },
+  'next/router': {
+    requiredVersion: false,
+    singleton: true,
+    import: undefined,
+  },
+  'next/image': {
+    requiredVersion: undefined,
+    singleton: true,
+    import: undefined,
+  },
+  'next/script': {
+    requiredVersion: undefined,
+    singleton: true,
+    import: undefined,
+  },
   react: {
+    singleton: true,
+    requiredVersion: false,
+    import: false,
+  },
+  'react/': {
+    singleton: true,
+    requiredVersion: false,
+    import: false,
+  },
+  'react-dom/': {
+    singleton: true,
+    requiredVersion: false,
+    import: false,
+  },
+  'react-dom': {
+    singleton: true,
+    requiredVersion: false,
+    import: false,
+  },
+  'react/jsx-dev-runtime': {
     singleton: true,
     requiredVersion: false,
   },
@@ -28,325 +68,128 @@ export const DEFAULT_SHARE_SCOPE: SharedObject = {
     singleton: true,
     requiredVersion: false,
   },
-  'react-dom': {
-    singleton: true,
-    requiredVersion: false,
-  },
-  'next/dynamic': {
-    requiredVersion: false,
-    singleton: true,
-  },
   'styled-jsx': {
-    requiredVersion: false,
     singleton: true,
+    import: undefined,
+    version: require('styled-jsx/package.json').version,
+    requiredVersion: '^' + require('styled-jsx/package.json').version,
   },
   'styled-jsx/style': {
-    requiredVersion: false,
     singleton: true,
+    import: false,
+    version: require('styled-jsx/package.json').version,
+    requiredVersion: '^' + require('styled-jsx/package.json').version,
   },
-  'next/link': {
-    requiredVersion: false,
+  'styled-jsx/css': {
     singleton: true,
-  },
-  'next/router': {
-    requiredVersion: false,
-    singleton: true,
-  },
-  'next/script': {
-    requiredVersion: false,
-    singleton: true,
-  },
-  'next/head': {
-    requiredVersion: false,
-    singleton: true,
+    import: undefined,
+    version: require('styled-jsx/package.json').version,
+    requiredVersion: '^' + require('styled-jsx/package.json').version,
   },
 };
 
-// put host in-front of any shared module key, so "hostreact"
-export const reKeyHostShared = (
-  options: Shared = {}
-): Record<string, SharedConfig> => {
-  const shared = {
-    // ...options, causes multiple copies of a package to be loaded into a graph, dangerous for singletons
-    ...DEFAULT_SHARE_SCOPE,
-  } as Record<string, SharedConfig>;
+/**
+ * Defines a default share scope for the browser environment.
+ * This function takes the DEFAULT_SHARE_SCOPE and sets eager to undefined and import to undefined for all entries.
+ * For 'react', 'react-dom', 'next/router', and 'next/link', it sets eager to true.
+ * The module hoisting system relocates these modules into the right runtime and out of the remote.
+ *
+ * @type {SharedObject}
+ * @returns {SharedObject} - The modified share scope for the browser environment.
+ */
 
-  const reKeyedInternalModules = Object.entries(shared).reduce((acc, item) => {
-    const [itemKey, shareOptions] = item;
+export const DEFAULT_SHARE_SCOPE_BROWSER: sharePlugin.SharedObject =
+  Object.entries(DEFAULT_SHARE_SCOPE).reduce((acc, item) => {
+    const [key, value] = item as [string, sharePlugin.SharedConfig];
 
-    const shareKey = `host${(item as any).shareKey || itemKey}`;
-    acc[shareKey] = shareOptions;
-
-    if (!shareOptions.import) {
-      acc[shareKey].import = itemKey;
-    }
-
-    if (!shareOptions.shareKey) {
-      acc[shareKey].shareKey = itemKey;
-    }
-
-    if (DEFAULT_SHARE_SCOPE[itemKey]) {
-      acc[shareKey].packageName = itemKey;
-    }
+    // Set eager and import to undefined for all entries, except for the ones specified above
+    acc[key] = { ...value, import: undefined };
 
     return acc;
-  }, {} as Record<string, SharedConfig>);
+  }, {} as sharePlugin.SharedObject);
 
-  return {
-    ...options, // pass through undoctored shared modules from the user config
-    ...reKeyedInternalModules,
-  } as Record<string, SharedConfig>;
-};
+/**
+ * Checks if the remote value is an internal or promise delegate module reference.
+ *
+ * @param {string} value - The remote value to check.
+ * @returns {boolean} - True if the value is an internal or promise delegate module reference, false otherwise.
+ */
+const isInternalOrPromise = (value: string): boolean =>
+  ['internal ', 'promise '].some((prefix) => value.startsWith(prefix));
 
-// browser template to convert remote into promise new promise and use require.loadChunk to load the chunk
-export const generateRemoteTemplate = (
-  url: string,
-  global: any
-) => `new Promise(function (resolve, reject) {
-    var url = new URL(${JSON.stringify(url)});
-    url.searchParams.set('t', Date.now());
-    var __webpack_error__ = new Error();
-    if(!window.remoteLoading) {
-        window.remoteLoading = {};
-    };
-
-    if(window.remoteLoading[${JSON.stringify(global)}]) {
-      return resolve(window.remoteLoading[${JSON.stringify(global)}])
-    }
-
-    var res, rej;
-    window.remoteLoading[${JSON.stringify(
-      global
-    )}] = new Promise(function(rs,rj){
-      res = rs;
-      rej = rj;
-    })
-
-    if (typeof window[${JSON.stringify(global)}] !== 'undefined') {
-      res(window[${JSON.stringify(global)}]);
-      return resolve(window[${JSON.stringify(global)}]);
-    }
-
-     __webpack_require__.l(
-      url.href,
-      function (event) {
-        if (typeof window[${JSON.stringify(global)}] !== 'undefined') {
-          res(window[${JSON.stringify(global)}]);
-          return resolve(window[${JSON.stringify(global)}]);
-        }
-        var errorType = event && (event.type === 'load' ? 'missing' : event.type);
-        var realSrc = event && event.target && event.target.src;
-        __webpack_error__.message =
-          'Loading script failed.\\n(' + errorType + ': ' + realSrc + ')';
-        __webpack_error__.name = 'ScriptExternalLoadError';
-        __webpack_error__.type = errorType;
-        __webpack_error__.request = realSrc;
-        rej(__webpack_error__);
-        reject(__webpack_error__);
-      },
-      ${JSON.stringify(global)}
-    );
-  }).then(function () {
-    const proxy = {
-      get: ${global}.get,
-      init: function(shareScope, initToken) {
-
-        const handler = {
-          get(target, prop) {
-            if (target[prop]) {
-              Object.values(target[prop]).forEach(function(o) {
-                if(o.from === '_N_E') {
-                  o.loaded = 1
-                }
-              })
-            }
-            return target[prop]
-          },
-          set(target, property, value, receiver) {
-            if (target[property]) {
-              return target[property]
-            }
-            target[property] = value
-            return true
-          }
-        }
-        try {
-          ${global}.init(new Proxy(shareScope, handler), initToken)
-        } catch (e) {
-
-        }
-        ${global}.__initialized = true
+/**
+ * Parses the remotes object and checks if they are using a custom promise template or not.
+ * If it's a custom promise template, the remote syntax is parsed to get the module name and version number.
+ * If the remote value is using the standard remote syntax, a delegated module is created.
+ *
+ * @param {Record<string, any>} remotes - The remotes object to be parsed.
+ * @returns {Record<string, string>} - The parsed remotes object with either the original value,
+ * the value for internal or promise delegate module reference, or the created delegated module.
+ */
+export const parseRemotes = (
+  remotes: Record<string, any>,
+): Record<string, string> => {
+  return Object.entries(remotes).reduce(
+    (acc, [key, value]) => {
+      if (isInternalOrPromise(value)) {
+        // If the value is an internal or promise delegate module reference, keep the original value
+        return { ...acc, [key]: value };
       }
-    }
-    if (!${global}.__initialized) {
-      proxy.init(__webpack_require__.S.default)
-    }
-    return proxy
-  })`;
 
-// shared packages must be compiled into webpack bundle, not require() pass through
-export const internalizeSharedPackages = (
-  options: ModuleFederationPluginOptions,
-  compiler: Compiler
-) => {
-  //TODO: should use this util for other areas where we read MF options from userland
-  if (!options.shared) {
-    return;
-  }
-  const sharedOptions = parseShareOptions(options);
-  // get share keys from user, filter out ones that need to be external
-  const internalizableKeys = Object.keys(sharedOptions).filter((key) => {
-    if (!DEFAULT_SHARE_SCOPE[key]) {
-      return true;
-    }
-
-    const index = sharedOptions[key].import;
-
-    if (index && !DEFAULT_SHARE_SCOPE[index]) {
-      return true;
-    }
-
-    return false;
-  });
-
-  if (Array.isArray(compiler.options.externals)) {
-    // take original externals regex
-    const backupExternals = compiler.options.externals[0];
-    // if externals is a function (like when you're not running in serverless mode or creating a single build)
-    if (typeof backupExternals === 'function') {
-      // replace externals function with short-circuit, or fall back to original algo
-      compiler.options.externals[0] = (mod, callback) => {
-        if (!internalizableKeys.some((v) => mod.request?.includes(v))) {
-          return backupExternals(mod, callback);
-        }
-        // bundle it
-        return Promise.resolve();
-      };
-    }
-  }
-};
-
-export const externalizedShares: SharedObject = Object.entries(
-  DEFAULT_SHARE_SCOPE
-).reduce((acc, item) => {
-  const [key, value] = item as [string, SharedConfig];
-
-  acc[key] = { ...value, import: false };
-
-  if (key === 'react/jsx-runtime') {
-    delete (acc[key] as SharedConfig).import;
-  }
-
-  return acc;
-}, {} as SharedObject);
-
-// determine output base path, derives .next folder location
-export const getOutputPath = (compiler: Compiler) => {
-  const isServer = compiler.options.target !== 'client';
-  let outputPath: string | string[] | undefined =
-    compiler.options.output.path?.split(path.sep);
-
-  const foundIndex = outputPath?.lastIndexOf(isServer ? 'server' : 'static');
-
-  outputPath = outputPath
-    ?.slice(0, foundIndex && foundIndex > 0 ? foundIndex : outputPath.length)
-    .join(path.sep);
-
-  return outputPath as string;
-};
-
-export const removePlugins = [
-  'NextJsRequireCacheHotReloader',
-  'BuildManifestPlugin',
-  'WellKnownErrorsPlugin',
-  'WebpackBuildEventsPlugin',
-  'HotModuleReplacementPlugin',
-  'NextMiniCssExtractPlugin',
-  'NextFederationPlugin',
-  'CopyFilePlugin',
-  'ProfilingPlugin',
-  'DropClientPage',
-  'ReactFreshWebpackPlugin',
-];
-
-export const parseRemoteSyntax = (remote: string) => {
-  if (
-    typeof remote === 'string' &&
-    remote.includes('@') &&
-    !remote.startsWith('internal ')
-  ) {
-    const [url, global] = extractUrlAndGlobal(remote);
-    return generateRemoteTemplate(url, global);
-  }
-
-  return remote;
-};
-
-export const parseRemotes = (remotes: Record<string, any>) =>
-  Object.entries(remotes).reduce((acc, [key, value]) => {
-    // check if user is passing a internal "delegate module" reference
-    if (value.startsWith('internal ')) {
       return { ...acc, [key]: value };
-    }
-    // check if user is passing custom promise template
-    if (!value.startsWith('promise ') && value.includes('@')) {
-      return { ...acc, [key]: `promise ${parseRemoteSyntax(value)}` };
-    }
-    // return standard template otherwise
-    return { ...acc, [key]: value };
-  }, {} as Record<string, string>);
-
-export const getDelegates = (remotes: Record<string, any>) => {
-  return Object.entries(remotes).reduce((acc, [key, value]) => {
-    // check if user is passing a internal "delegate module" reference
-    if (value.startsWith('internal ')) {
-      return { ...acc, [key]: value };
-    }
-    return acc;
-  }, {} as Record<string, string>);
-};
-
-const parseShareOptions = (options: ModuleFederationPluginOptions) => {
-  const sharedOptions: [string, SharedConfig][] = parseOptions(
-    options.shared,
-    (item: string, key: string) => {
-      if (typeof item !== 'string')
-        throw new Error('Unexpected array in shared');
-
-      return item === key || !isRequiredVersion(item)
-        ? {
-            import: item,
-          }
-        : {
-            import: key,
-            requiredVersion: item,
-          };
     },
-    (item: any) => item
+    {} as Record<string, string>,
+  );
+};
+/**
+ * Checks if the remote value is an internal delegate module reference.
+ * An internal delegate module reference starts with the string 'internal '.
+ *
+ * @param {string} value - The remote value to check.
+ * @returns {boolean} - Returns true if the value is an internal delegate module reference, otherwise returns false.
+ */
+const isInternalDelegate = (value: string): boolean => {
+  return value.startsWith('internal ');
+};
+/**
+ * Extracts the delegate modules from the provided remotes object.
+ * This function iterates over the remotes object and checks if each remote value is an internal delegate module reference.
+ * If it is, the function adds it to the returned object.
+ *
+ * @param {Record<string, any>} remotes - The remotes object containing delegate module references.
+ * @returns {Record<string, string>} - An object containing only the delegate modules from the remotes object.
+ */
+export const getDelegates = (
+  remotes: Record<string, any>,
+): Record<string, string> =>
+  Object.entries(remotes).reduce(
+    (acc, [key, value]) =>
+      isInternalDelegate(value) ? { ...acc, [key]: value } : acc,
+    {},
   );
 
-  return sharedOptions.reduce((acc, [key, options]) => {
-    acc[key] = {
-      import: options.import,
-      shareKey: options.shareKey || key,
-      shareScope: options.shareScope,
-      requiredVersion: options.requiredVersion,
-      strictVersion: options.strictVersion,
-      singleton: options.singleton,
-      packageName: options.packageName,
-      eager: options.eager,
-    };
-    return acc;
-  }, {} as Record<string, SharedConfig>);
+/**
+ * Takes an error object and formats it into a displayable string.
+ * If the error object contains a stack trace, it is appended to the error message.
+ *
+ * @param {Error} error - The error object to be formatted.
+ * @returns {string} - The formatted error message string. If a stack trace is present in the error object, it is appended to the error message.
+ */
+const formatError = (error: Error): string => {
+  let { message } = error;
+  if (error.stack) {
+    message += `\n${error.stack}`;
+  }
+  return message;
 };
 
-export const toDisplayErrors = (err: Error[]) =>
-  err
-    .map((error) => {
-      let { message } = error;
-      if (error.stack) {
-        message += `\n${error.stack}`;
-      }
-      return message;
-    })
-    .join('\n');
+/**
+ * Transforms an array of Error objects into a single string. Each error message is formatted using the 'formatError' function.
+ * The resulting error messages are then joined together, separated by newline characters.
+ *
+ * @param {Error[]} err - An array of Error objects that need to be formatted and combined.
+ * @returns {string} - A single string containing all the formatted error messages, separated by newline characters.
+ */
+export const toDisplayErrors = (err: Error[]): string => {
+  return err.map(formatError).join('\n');
+};

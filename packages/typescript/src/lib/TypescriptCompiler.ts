@@ -6,8 +6,6 @@ import ts from 'typescript';
 import path from 'path';
 import fs from 'fs';
 
-import { Logger } from '@module-federation/utilities';
-
 import {
   FederatedTypesPluginOptions,
   ModuleFederationPluginOptions,
@@ -15,6 +13,7 @@ import {
 
 import { NormalizeOptions } from './normalizeOptions';
 import { TypesCache } from './Caching';
+import { Logger } from '../Logger';
 
 let vueTs: typeof VueTs;
 try {
@@ -39,7 +38,7 @@ export class TypescriptCompiler {
 
   generateDeclarationFiles(
     exposedComponents: ModuleFederationPluginOptions['exposes'],
-    additionalFilesToCompile: FederatedTypesPluginOptions['additionalFilesToCompile'] = []
+    additionalFilesToCompile: FederatedTypesPluginOptions['additionalFilesToCompile'] = [],
   ) {
     const exposeSrcToDestMap: Record<string, string> = {};
 
@@ -49,12 +48,12 @@ export class TypescriptCompiler {
         const pathWithExt = this.getNormalizedPathWithExt(exposeSrc);
         exposeSrcToDestMap[pathWithExt] = exposeDest;
         return pathWithExt;
-      }
+      },
     );
 
     const normalizedAdditionalFiles = this.normalizeFiles(
       additionalFilesToCompile,
-      this.getNormalizedPathWithExt.bind(this)
+      this.getNormalizedPathWithExt.bind(this),
     );
 
     const host = this.createHost(exposeSrcToDestMap);
@@ -88,7 +87,7 @@ export class TypescriptCompiler {
       case 'vue-tsc':
         if (!vueTs) {
           throw new Error(
-            'vue-tsc must be installed when using the vue-tsc compiler option'
+            'vue-tsc must be installed when using the vue-tsc compiler option',
           );
         }
         return vueTs.createProgram(programOptions) as _Program;
@@ -100,7 +99,7 @@ export class TypescriptCompiler {
 
   private normalizeFiles<T, U extends string>(
     files: T[],
-    mapFn: (value: T, index: number, array: T[]) => U
+    mapFn: (value: T, index: number, array: T[]) => U,
   ) {
     return files.map(mapFn).filter((entry) => /\.tsx?$/.test(entry));
   }
@@ -113,7 +112,7 @@ export class TypescriptCompiler {
     const normalizedRootDir = path.resolve(cwd, rootDir);
     const filenameWithExt = this.getFilenameWithExtension(
       normalizedRootDir,
-      entry
+      entry,
     );
 
     const pathWithExt = path.resolve(normalizedRootDir, filenameWithExt);
@@ -131,7 +130,7 @@ export class TypescriptCompiler {
       writeOrderByteMark,
       onError,
       sourceFiles,
-      data
+      data,
     ) => {
       this.tsDefinitionFilesObj[filepath] = text;
       originalWriteFile(
@@ -140,7 +139,7 @@ export class TypescriptCompiler {
         writeOrderByteMark,
         onError,
         sourceFiles,
-        data
+        data,
       );
 
       // create exports matching the `exposes` config
@@ -151,22 +150,20 @@ export class TypescriptCompiler {
       if (exposedDestFilePath) {
         const normalizedExposedDestFilePath = path.resolve(
           this.options.distDir,
-          `${exposedDestFilePath}.d.ts`
+          `${exposedDestFilePath}.d.ts`,
         );
 
         const relativePathToCompiledFile = path.relative(
           path.dirname(normalizedExposedDestFilePath),
-          filepath
+          filepath,
         );
         // add ./ so it's always relative, remove d.ts because it's not needed and can throw warnings
-        let importPath =
-          './' + relativePathToCompiledFile.replace(/\.d\.ts$/, '');
-
-        // If we're on Windows, need to convert "\" to "/" in the import path since it
-        // was derived from platform-specific file system path.
-        if (path.sep === '\\') {
-          importPath = importPath.replaceAll(path.sep, '/');
-        }
+        const importPath =
+          './' +
+          relativePathToCompiledFile
+            .replace(/\.d\.ts$/, '')
+            .split(path.sep) // Windows platform-specific file system path fix
+            .join('/');
 
         const reexport = `export * from '${importPath}';\nexport { default } from '${importPath}';`;
 
@@ -176,7 +173,7 @@ export class TypescriptCompiler {
         originalWriteFile(
           normalizedExposedDestFilePath,
           reexport,
-          writeOrderByteMark
+          writeOrderByteMark,
         );
       }
     };
@@ -186,19 +183,19 @@ export class TypescriptCompiler {
 
   private reportCompileDiagnostic(diagnostic: ts.Diagnostic): void {
     const { line } = diagnostic.file!.getLineAndCharacterOfPosition(
-      diagnostic.start!
+      diagnostic.start!,
     );
 
     this.logger.log(
       'TS Error',
       diagnostic.code,
       ':',
-      ts.flattenDiagnosticMessageText(diagnostic.messageText, ts.sys.newLine)
+      ts.flattenDiagnosticMessageText(diagnostic.messageText, ts.sys.newLine),
     );
     this.logger.log(
       '         at',
       `${diagnostic.file!.fileName}:${line + 1}`,
-      ts.sys.newLine // '\n'
+      ts.sys.newLine, // '\n'
     );
   }
 
@@ -208,7 +205,7 @@ export class TypescriptCompiler {
     const tsconfigPath = ts.findConfigFile(
       context,
       ts.sys.fileExists,
-      'tsconfig.json'
+      'tsconfig.json',
     );
 
     if (!tsconfigPath) {
@@ -220,7 +217,7 @@ export class TypescriptCompiler {
     const configContent = ts.parseJsonConfigFileContent(
       readResult.config,
       ts.sys,
-      context
+      context,
     );
 
     return configContent.options;

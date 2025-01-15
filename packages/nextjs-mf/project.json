@@ -3,72 +3,61 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/nextjs-mf/src",
   "projectType": "library",
+  "tags": ["type:pkg"],
   "targets": {
     "build": {
-      "executor": "@nrwl/js:tsc",
+      "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "dist/packages/nextjs-mf",
-        "main": "packages/nextjs-mf/src/index.js",
+        "outputPath": "packages/nextjs-mf/dist",
+        "main": "packages/nextjs-mf/src/index.ts",
         "tsConfig": "packages/nextjs-mf/tsconfig.lib.json",
-        "buildableProjectDepsInPackageJsonType": "dependencies",
-        "updateBuildableProjectDepsInPackageJson": true,
         "assets": ["packages/nextjs-mf/*.md"]
-      }
-    },
-    "publish": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "node tools/scripts/publish.mjs nextjs-mf {args.ver} {args.tag}"
       },
       "dependsOn": [
         {
-          "projects": "self",
-          "target": "build"
-        },
-        {
-          "projects": "dependencies",
-          "target": "build"
+          "target": "build",
+          "dependencies": true
         }
       ]
     },
     "lint": {
-      "executor": "@nrwl/linter:eslint",
+      "executor": "@nx/eslint:lint",
       "outputs": ["{options.outputFile}"],
       "options": {
-        "lintFilePatterns": ["packages/nextjs-mf/**/*.js"]
+        "lintFilePatterns": [
+          "packages/nextjs-mf/**/*.js",
+          "packages/nextjs-mf/**/*.ts"
+        ]
       }
     },
     "test": {
-      "executor": "@nrwl/jest:jest",
+      "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/packages/nextjs-mf"],
       "options": {
         "jestConfig": "packages/nextjs-mf/jest.config.js",
         "passWithNoTests": true
       }
     },
-    "version": {
-      "executor": "@jscutlery/semver:version",
+    "pre-release": {
+      "executor": "nx:run-commands",
       "options": {
-        "postTargets": ["nextjs-mf:npm", "nextjs-mf:github"],
-        "trackDeps": true,
-        "push": true
-      }
-    },
-    "github": {
-      "executor": "@jscutlery/semver:github",
-      "options": {
-        "tag": "${tag}",
-        "notes": "${notes}"
-      }
-    },
-    "npm": {
-      "executor": "ngx-deploy-npm:deploy",
-      "options": {
-        "access": "public"
+        "parallel": false,
+        "commands": [
+          {
+            "command": "nx run nextjs-mf:test",
+            "forwardAllArgs": false
+          },
+          {
+            "command": "nx run nextjs-mf:build",
+            "forwardAllArgs": false
+          },
+          {
+            "command": "rm ./packages/nextjs-mf/dist/package.json",
+            "forwardAllArgs": false
+          }
+        ]
       }
     }
-  },
-  "tags": [],
-  "implicitDependencies": ["utils", "node"]
+  }
 }

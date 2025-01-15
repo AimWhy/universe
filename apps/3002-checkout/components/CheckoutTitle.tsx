@@ -6,6 +6,7 @@ const CheckoutTitle = () => {
   useEffect(() => {
     setHookData('with hooks data');
   }, []);
+  console.log('CHECKOUT TITLE Componnet');
 
   return (
     <h3 className="title">

@@ -36,6 +36,49 @@ yarn add @module-federation/node
 
 There are two approaches to using the plugins exported from this package, dependent on your use case.
 
+### Use as Runtime Plugin
+
+`module-federation/enhanced` supports runtime plugins.
+
+```js
+const { ModuleFederationPlugin } = require('@module-federation/enhanced');
+
+const options = {
+  target: 'async-node',
+  output: {
+    chunkFilename: '[id]-[chunkhash].js', // important to hash chunks
+  },
+  plugins: [
+    new ModuleFederationPlugin({
+      name: 'app1',
+      exposes: {},
+      remotes: {
+        app2: 'app2@http://',
+      },
+      runtimePlugins: [require.resolve('@module-federation/node/runtimePlugin')],
+      remoteType: 'script',
+      library: { type: 'commonjs-module', name: 'app1' },
+    }),
+  ],
+};
+```
+
+or you can enable it with some presets via UniversalFederation
+
+```js
+new UniversalFederationPlugin({
+  name: 'website2',
+  library: { type: 'commonjs-module' },
+  isServer: true, // or false
+  remotes: {},
+  filename: 'remoteEntry.js',
+  useRuntimePlugin: true, // uses the module-federation/enhanced runtime plugin api
+  exposes: {
+    './SharedComponent': './remoteServer/SharedComponent',
+  },
+});
+```
+
 ### UniversalFederationPlugin
 
 This plugin is an abstraction over both `NodeFederationPlugin` and `ModuleFederationPlugin`. It will alternate between which it uses based on where the build is intended to be used.
@@ -61,6 +104,7 @@ const config = {
       isServer: true, // or false
       remotes: {},
       filename: 'remoteEntry.js',
+      useRuntimePlugin: true, // uses the module-federation/enhanced runtime plugins
       exposes: {
         './SharedComponent': './remoteServer/SharedComponent',
       },
@@ -83,10 +127,7 @@ The `NodeFederationPlugin` follows the same API as the [Module Federation Plugin
 An example configuration is presented below:
 
 ```js
-const {
-  NodeFederationPlugin,
-  StreamingTargetPlugin,
-} = require('@module-federation/node');
+const { NodeFederationPlugin, StreamingTargetPlugin } = require('@module-federation/node');
 
 const config = {
   target: isServer ? false : 'web',
@@ -132,6 +173,8 @@ revalidate().then((shouldReload) => {
 });
 ```
 
+_Note_: To ensure that changes made to files in remotes are picked up `revalidate`, you can set the remotes webpack [output.filename](https://webpack.js.org/configuration/output/#outputfilename) to `[name]-[contenthash].js` (or similar). This will cause the remoteEntry.js file to be regenerated with a unique hash every time a new build occurs. The revalidate method intelligently detects changes by comparing the hashes of the remoteEntry.js files. By incorporating [contenthash] into the remote's webpack configuration, you enable the shell to seamlessly incorporate the updated files from the remotes.
+
 **Hot reloading Express.js**
 
 Express has its own route stack, so reloading require cache will not be enough to reload the routes inside express.
@@ -141,9 +184,7 @@ Express has its own route stack, so reloading require cache will not be enough t
 const app = express();
 
 global.clearRoutes = () => {
-  app._router.stack = app._router.stack.filter(
-    (k) => !(k && k.route && k.route.path)
-  );
+  app._router.stack = app._router.stack.filter((k) => !(k && k.route && k.route.path));
 };
 
 // in some other file (within the scope of webpack build)
@@ -153,6 +194,32 @@ revalidate().then((shouldReload) => {
     global.clearRoutes();
   }
 });
+```
+
+### Overriding default http chunk fetch
+
+```js
+const chunkFetcher = globalThis.webpackChunkLoad || globalThis.fetch || fetchPolyfill;
+// then it will pass one argument to the function, the url to fetch
+
+chunkFetcher(url)
+  .then((res) => res.text())
+  .then((text) => {
+    // do something with the text
+  });
+```
+
+If you want to use your own custom fetch, or add fetch headers, either in the entrypoint of webpack or outside of webpack scope, like in express server you can override the default chunk fetcher by setting the `globalThis.webpackChunkLoad` variable.
+
+```js
+globalThis.webpackChunkLoad = async (url) => {
+  const res = await fetch(url, {
+    headers: {
+      'x-custom-header': 'custom-header-value',
+    },
+  });
+  return res.text();
+};
 ```
 
 ## 🔑 License

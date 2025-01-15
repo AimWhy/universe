@@ -1,20 +1,15 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, lazy } from 'react';
 import Head from 'next/head';
-import dynamic from 'next/dynamic';
-
-const CheckoutTitle = dynamic(() => import('checkout/CheckoutTitle'), {
-  ssr: true,
-});
-const ButtonOldAnt = dynamic(() => import('checkout/ButtonOldAnt'), {
-  ssr: true,
-});
-const WebpackSvgRemote = dynamic(() => import('shop/WebpackSvg'), {
-  ssr: true,
-});
-const WebpackPngRemote = dynamic(() => import('shop/WebpackPng'), {
-  ssr: true,
-});
-console.log('loaded home app', import('shop/WebpackPng'), import('checkout/ButtonOldAnt'));
+import CheckoutTitle from 'checkout/CheckoutTitle';
+import ButtonOldAnt from 'checkout/ButtonOldAnt';
+// const CheckoutTitle = lazy(() => import('checkout/CheckoutTitle'));
+// const ButtonOldAnt = lazy(() => import('checkout/ButtonOldAnt'));
+const WebpackSvgRemote = lazy(() =>
+  import('shop/WebpackSvg').then((m) => {
+    return m;
+  }),
+);
+const WebpackPngRemote = lazy(() => import('shop/WebpackPng'));
 
 const Home = () => {
   return (
@@ -64,7 +59,6 @@ const Home = () => {
           <b>checkout</b>
         </li>
       </ul>
-
       <h2 style={{ marginTop: '30px' }}>Federation test cases</h2>
       <table border={1} cellPadding={5}>
         <thead>
@@ -82,7 +76,7 @@ const Home = () => {
               Loading remote component (CheckoutTitle) from localhost:3002
               <br />
               <blockquote>
-                dynamic(()=&gt;import(&apos;checkout/CheckoutTitle&apos;))
+                lazy(()=&gt;import(&apos;checkout/CheckoutTitle&apos;))
               </blockquote>
             </td>
             <td>
@@ -99,7 +93,7 @@ const Home = () => {
             <td>
               Load federated component from checkout with old antd version
             </td>
-            <td>[Button from antd@4.20.0]</td>
+            <td>[Button from antd@5.18.3]</td>
             <td>
               <Suspense fallback="loading ButtonOldAnt">
                 <ButtonOldAnt />
@@ -114,7 +108,7 @@ const Home = () => {
               <blockquote>(check publicPath fix in image-loader)</blockquote>
             </td>
             <td>
-              <img src="./webpack.png" />
+              <img className="home-webpack-png" src="./webpack.png" />
             </td>
             <td>
               <Suspense fallback="loading WebpackPngRemote">

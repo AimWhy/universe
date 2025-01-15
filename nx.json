@@ -1,90 +1,112 @@
 {
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
-  "npmScope": "module-federation",
   "defaultProject": "3000-home",
-  "affected": {
-    "defaultBase": "main"
-  },
-  "tasksRunnerOptions": {
-    "default": {
-      "runner": "nx/tasks-runners/default",
-      "options": {
-        "cacheableOperations": [
-          "build",
-          "lint",
-          "test",
-          "e2e"
-        ]
-      }
-    }
-  },
   "targetDefaults": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "production",
-        "^production"
-      ]
+      "inputs": ["production", "^production"],
+      "dependsOn": ["^build"],
+      "cache": true
     },
     "lint": {
-      "inputs": [
-        "default",
-        "{workspaceRoot}/.eslintrc.json"
-      ]
+      "inputs": ["default", "{workspaceRoot}/.eslintrc.json"],
+      "cache": true
     },
     "test": {
+      "inputs": ["default", "^production", "{workspaceRoot}/jest.preset.js"],
+      "cache": true
+    },
+    "build-storybook": {
       "inputs": [
         "default",
         "^production",
-        "{workspaceRoot}/jest.preset.js"
-      ]
+        "{projectRoot}/.storybook/**/*",
+        "{projectRoot}/tsconfig.storybook.json"
+      ],
+      "cache": true
+    },
+    "e2e": {
+      "inputs": ["default", "^production"],
+      "cache": true
+    },
+    "@nx/webpack:webpack": {
+      "inputs": [
+        "production",
+        "^production",
+        {
+          "env": "NX_MF_DEV_SERVER_STATIC_REMOTES"
+        },
+        {
+          "env": "NX_MF_DEV_REMOTES"
+        }
+      ],
+      "dependsOn": ["^build"]
+    },
+    "3000-home:build:production": {
+      "cache": true
+    },
+    "3001-shop:build:production": {
+      "cache": true
+    },
+    "3002-checkout:build:production": {
+      "cache": true
     }
   },
   "namedInputs": {
-    "default": [
-      "{projectRoot}/**/*",
-      "sharedGlobals"
-    ],
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
     "production": [
       "default",
       "!{projectRoot}/.eslintrc.json",
       "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
       "!{projectRoot}/tsconfig.spec.json",
-      "!{projectRoot}/jest.config.[jt]s"
+      "!{projectRoot}/jest.config.[jt]s",
+      "!{projectRoot}/vitest.config.[jt]s",
+      "!{projectRoot}/.storybook/**/*",
+      "!{projectRoot}/**/*.stories.@(js|jsx|ts|tsx|mdx)",
+      "!{projectRoot}/src/test-setup.[jt]s",
+      "!{projectRoot}/tsconfig.storybook.json"
     ],
-    "sharedGlobals": [
-      "{workspaceRoot}/babel.config.json"
-    ]
+    "sharedGlobals": ["{workspaceRoot}/babel.config.json"]
   },
   "workspaceLayout": {
     "appsDir": "apps",
     "libsDir": "packages"
   },
   "generators": {
-    "@nrwl/react": {
+    "@nx/react": {
       "application": {
+        "style": "none",
         "linter": "eslint",
+        "bundler": "webpack",
         "babel": true
       },
       "library": {
+        "style": "none",
         "linter": "eslint"
+      },
+      "component": {
+        "style": "none"
       }
     },
-    "@nrwl/next": {
+    "@nx/next": {
       "application": {
         "style": "css",
         "linter": "eslint"
       }
+    },
+    "@nx/web:application": {
+      "style": "css",
+      "linter": "eslint",
+      "unitTestRunner": "none",
+      "e2eTestRunner": "none"
+    },
+    "@nx/web:library": {
+      "style": "css",
+      "linter": "eslint",
+      "unitTestRunner": "none"
     }
   },
-  "targetDependencies": {
-    "version": [
-      {
-        "target": "version",
-        "projects": "dependencies"
-      }
-    ]
-  }
+  "useInferencePlugins": false,
+  "defaultBase": "main",
+  "nxCloudAccessToken": "NTVlZTRhOWItMGRjYy00YmJjLTllNzAtNDFkNzRhNzdjZDkwfHJlYWQtd3JpdGU=",
+  "useLegacyCache": true
 }

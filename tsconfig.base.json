@@ -8,19 +8,20 @@
     "moduleResolution": "node",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "importHelpers": true,
+    "importHelpers": false,
     "target": "es2021",
+    "allowJs": true,
     "module": "esnext",
     "lib": ["es2021", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@module-federation/nextjs-mf": ["packages/nextjs-mf/src/index.ts"],
-      "@module-federation/node": ["packages/node/src/index.ts"],
-      "@module-federation/typescript": ["packages/typescript/src/index.ts"],
-      "@module-federation/utilities": ["packages/utilities/src/index.ts"]
-    }
+    "baseUrl": "."
   },
-  "exclude": ["node_modules", "tmp"]
+  "exclude": [
+    "node_modules/**",
+    "tmp",
+    "**/node_modules/**",
+    "**/dist/**",
+    "dist/**"
+  ]
 }

@@ -1,0 +1,12 @@
+{
+  "footer": {
+    "menu": {
+      "documentation": "Documentation",
+      "examples": "Examples",
+      "medusa": "Try Medusa",
+      "practical-guide": "Practical guide",
+      "privacy-policy": "Privacy Policy",
+      "sponsor": "Become a sponsor"
+    }
+  }
+}

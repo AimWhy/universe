@@ -1,42 +1,52 @@
-const { withModuleFederation } = require('@nrwl/react/module-federation');
-const { FederatedTypesPlugin } = require('@module-federation/typescript');
+//const { registerPluginTSTranspiler } = require('nx/src/utils/nx-plugin.js');
 
-const baseConfig = require('./module-federation.config');
+//registerPluginTSTranspiler();
+const {
+  ModuleFederationPlugin,
+} = require('@module-federation/enhanced/webpack');
+const { composePlugins, withNx } = require('@nx/webpack');
+const { withReact } = require('@nx/react');
+process.env.FEDERATION_DEBUG = true;
 
-/**
- * @type {import('@nrwl/react/module-federation').ModuleFederationConfig}
- **/
-const defaultConfig = {
-  ...baseConfig,
-};
-
-module.exports = async (config, context) => {
-  const mf = await withModuleFederation(defaultConfig);
-
-  /** @type {import('webpack').Configuration} */
-  const parsedConfig = mf(config);
-
-  let moduleFederationPlugin;
-
-  const plugins = parsedConfig.plugins?.filter((p) => {
-    if (p.constructor.name === 'ModuleFederationPlugin') {
-      moduleFederationPlugin = p;
-      return false;
+module.exports = composePlugins(
+  withNx(),
+  withReact(),
+  async (config, context) => {
+    if (!config.devServer) {
+      config.devServer = {};
     }
-    return true;
-  });
+    config.devServer.host = '127.0.0.1';
+    const baseConfig = {
+      name: 'react_ts_remote',
+      filename: 'remoteEntry.js',
+      exposes: {
+        './Module': './src/app/nx-welcome.tsx',
+      },
+    };
+    config.plugins.push(new ModuleFederationPlugin(baseConfig));
 
-  parsedConfig.plugins = [
-    ...(plugins || []),
-    new FederatedTypesPlugin({
-      federationConfig: moduleFederationPlugin._options,
-    }),
-  ];
+    config.optimization.runtimeChunk = false;
+    config.plugins.forEach((p) => {
+      if (p.constructor.name === 'ModuleFederationPlugin') {
+        //Temporary workaround - https://github.com/nrwl/nx/issues/16983
+        p._options.library = undefined;
+      }
+    });
 
-  parsedConfig.infrastructureLogging = {
-    level: 'verbose',
-    colors: true,
-  };
+    //Temporary workaround - https://github.com/nrwl/nx/issues/16983
+    config.experiments = { outputModule: false };
 
-  return parsedConfig;
-};
+    // Update the webpack config as needed here.
+    // e.g. `config.plugins.push(new MyPlugin())`
+    config.output = {
+      ...config.output,
+      scriptType: 'text/javascript',
+    };
+    config.optimization = {
+      runtimeChunk: false,
+      minimize: false,
+    };
+    // const mf = await withModuleFederation(defaultConfig);
+    return config;
+  },
+);

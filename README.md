@@ -1,41 +1,55 @@
-# ModuleFederation
+<p align="center">
+  <img alt="Module federation Banner"  width="260" src="https://github.com/module-federation/core/assets/27547179/11234712-40fc-4696-a7fd-16e0c631005a">
+</p>
 
-# Documentation
+# Module Federation
 
-[module-federation/nextjs-mf](./packages/nextjs-mf)
+<p align="center">
+  <a href="https://www.npmjs.com/package/@module-federation/runtime?activeTab=readme">
+   <img src="https://img.shields.io/npm/v/@module-federation/runtime?style=flat-square&colorA=564341&colorB=EDED91" alt="npm version" />
+  </a>
+  <a href="https://npmcharts.com/compare/@module-federation/runtime?minimal=true">
+    <img src="https://img.shields.io/npm/dm/@module-federation/runtime.svg?style=flat-square&colorA=564341&colorB=EDED91" alt="downloads" />
+  </a>
+  <a href="https://github.com/web-infra-dev/rspack/blob/main/LICENSE">
+    <img src="https://img.shields.io/npm/l/@module-federation/runtime?style=flat-square&colorA=564341&colorB=EDED91" alt="license" />
+  </a>
+</p>
 
-[module-federation/node](./packages/node)
+You can consider the module federation capabilities provided by this repository as "module federation 2.0". "Module Federation 2.0" differs from the "Module Federation" built into Webpack 5 by offering not only the core features of module export, loading, and dependency sharing but also additional dynamic type hinting, a "Manifest", a "Federation Runtime", and a "Runtime Plugin System". These features make "Module Federation" more suitable for use as a micro-frontend architecture in large-scale web applications.
 
-[module-federation/utilities](./packages/utilities)
+## 💡 What is Module Federation?
 
-[module-federation/typescript](./packages/typescript)
+- Module Federation is a concept that allows developers to share code and resources across multiple JavaScript applications
 
-## Generate an application
+- Module Federation can be used to split monolithic applications into micro-front-end architectures
 
-Run `nx g @nrwl/next:app my-app` to generate an application.
+- Module Federation reuses common dependencies between modules as much as possible
 
-> You can use any of the plugins above to generate applications as well.
+## ✨ What new features does Module Federation provide?
 
-When using Nx, you can create multiple applications and libraries in the same workspace.
+- 🎨 Module Federation Runtime
+- 🧩 Runtime Plugins System
+- 📝 Manifest
+- 🚀 Dynamic type prompt
+- 🛠️ Chrome Devtool
 
-## Generate a library
+## 📚 Getting Started
 
-Run `nx g @nrwl/js:lib my-lib` to generate a library.
+To get started with Module Federation, see the [Quick Start](https://module-federation.io/guide/start/quick-start.html).
 
-> You can also use any of the plugins above to generate libraries as well.
+## 🧑‍💻 Community
 
-Libraries are shareable across libraries and applications. They can be imported from `@module-federation/mylib`.
+Come and chat with us on [Discussions](https://github.com/module-federation/universe/discussions) or [Discord](https://discord.gg/n69NnT3ACV)! The Module federation team and users are active there, and we're always looking for contributions.
 
-## Development server
+## 🤝 Contribution
 
-Run `nx serve my-app` for a dev server. Navigate to http://localhost:4200/. The app will automatically reload if you change any of the source files.
+> New contributors welcome!
 
-## Build
+Please read the [Contributing Guide](https://github.com/module-federation/core/blob/main/CONTRIBUTING.md).
 
-Run `nx build my-app` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `--prod` flag for a production build.
+![Alt](https://repobeats.axiom.co/api/embed/856dc1d4a6965d225232b1bd2da5d54549dc169e.svg "Repobeats analytics image")
 
-## Running unit tests
+## 🙌 Code of Conduct
 
-Run `nx test my-app` to execute the unit tests via [Jest](https://jestjs.io).
-
-Run `nx affected:test` to execute the unit tests affected by a change.
+This repo has adopted the Code of Conduct. Please check [Code of Conduct](./CODE_OF_CONDUCT.md) for more details.

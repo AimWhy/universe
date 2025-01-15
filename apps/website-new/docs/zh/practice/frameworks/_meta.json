@@ -1,0 +1,31 @@
+[
+  {
+    "type": "file",
+    "name": "index",
+    "label": "框架概览"
+  },
+  {
+    "type": "dir",
+    "name": "react",
+    "label": "React",
+    "collapsed": true
+  },
+  {
+    "type": "dir",
+    "name": "modern",
+    "label": "Modern.js",
+    "collapsed": true
+  },
+  {
+    "type": "dir",
+    "name": "next",
+    "label": "Next.js",
+    "collapsed": true
+  },
+  {
+    "type": "dir",
+    "name": "angular",
+    "label": "Angular",
+    "collapsed": true
+  }
+]

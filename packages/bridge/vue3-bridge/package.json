@@ -1,0 +1,54 @@
+{
+  "name": "@module-federation/bridge-vue3",
+  "author": "zhouxiao <codingzx@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/module-federation/core",
+    "directory": "packages/vue3-bridge"
+  },
+  "version": "0.8.8",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs.js",
+  "module": "./dist/index.es.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/",
+    "src/",
+    "CHANGELOG.md",
+    "LICENSE",
+    "package.json",
+    "project.json",
+    "README.md",
+    "tsconfig.json",
+    "tsconfig.node.json",
+    "vite.config.ts"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "peerDependencies": {
+    "vue": "=3",
+    "vue-router": "=3"
+  },
+  "dependencies": {
+    "@module-federation/bridge-shared": "workspace:*",
+    "@module-federation/sdk": "workspace:*",
+    "@module-federation/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "@vitejs/plugin-vue-jsx": "^4.0.0",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.14",
+    "vite-plugin-dts": "^4.3.0",
+    "vue": "^3.4.21",
+    "vue-router": "4.4.5",
+    "vue-tsc": "^2.0.6"
+  }
+}

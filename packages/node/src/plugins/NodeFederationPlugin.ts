@@ -2,201 +2,120 @@
 
 import type { Compiler, container } from 'webpack';
 import type { ModuleFederationPluginOptions } from '../types';
-import { extractUrlAndGlobal } from '@module-federation/utilities';
-
+import EntryChunkTrackerPlugin from './EntryChunkTrackerPlugin';
+/**
+ * Interface for NodeFederationOptions which extends ModuleFederationPluginOptions
+ * @interface
+ * @property {boolean} debug - Optional debug flag
+ */
 interface NodeFederationOptions extends ModuleFederationPluginOptions {
-  experiments?: Record<string, unknown>;
-  verbose?: boolean;
+  debug?: boolean;
+  useRuntimePlugin?: boolean;
 }
 
+/**
+ * Interface for Context
+ * @interface
+ * @property {typeof container.ModuleFederationPlugin} ModuleFederationPlugin - Optional ModuleFederationPlugin
+ */
 interface Context {
   ModuleFederationPlugin?: typeof container.ModuleFederationPlugin;
 }
 
-// possible remote evaluators
-// this depends on the chunk format selected.
-// commonjs2 - it think, is lazily evaluated - beware
-// const remote = eval(scriptContent + '\n  try{' + moduleName + '}catch(e) { null; };');
-// commonjs - fine to use but exports marker doesnt exist
-// const remote = eval('let exports = {};' + scriptContent + 'exports');
-// commonjs-module, ideal since it returns a commonjs module format
-// const remote = eval(scriptContent + 'module.exports')
-
-export const parseRemotes = (remotes: Record<string, any>) =>
-  Object.entries(remotes).reduce((acc, remote) => {
-    if (remote[1].startsWith('internal ')) {
-      acc[remote[0]] = remote[1];
-      return acc;
-    }
-    if (!remote[1].startsWith('promise ') && remote[1].includes('@')) {
-      acc[remote[0]] = `promise ${parseRemoteSyntax(remote[1])}`;
-      return acc;
-    }
-    acc[remote[0]] = remote[1];
-    return acc;
-  }, {} as Record<string, string>);
-// server template to convert remote into promise new promise and use require.loadChunk to load the chunk
-export const generateRemoteTemplate = (
-  url: string,
-  global: any
-) => `new Promise(function (resolve, reject) {
-    if(!global.__remote_scope__) {
-      // create a global scope for container, similar to how remotes are set on window in the browser
-      global.__remote_scope__ = {
-        _config: {},
-      }
-    }
-
-    if (typeof global.__remote_scope__[${JSON.stringify(
-      global
-    )}] !== 'undefined') return resolve(global.__remote_scope__[${JSON.stringify(
-  global
-)}]);
-    global.__remote_scope__._config[${JSON.stringify(
-      global
-    )}] = ${JSON.stringify(url)};
-    var __webpack_error__ = new Error();
-
-    __webpack_require__.l(
-      ${JSON.stringify(url)},
-      function (event) {
-        if (typeof global.__remote_scope__[${JSON.stringify(
-          global
-        )}] !== 'undefined') return resolve(global.__remote_scope__[${JSON.stringify(
-  global
-)}]);
-         var realSrc = event && event.target && event.target.src;
-        __webpack_error__.message = 'Loading script failed.\\n(' + event.message + ': ' + realSrc + ')';
-        __webpack_error__.name = 'ScriptExternalLoadError';
-        __webpack_error__.stack = event.stack;
-        reject(__webpack_error__);
-      },
-      ${JSON.stringify(global)},
-    );
-  }).catch((e)=> {
-    console.error(${JSON.stringify(
-      global
-    )}, 'is offline, returning fake remote');
-    console.error(e);
-
-    return {
-      fake: true,
-      get: (arg) => {
-        console.log('faking', arg, 'module on', ${JSON.stringify(global)});
-
-        return Promise.resolve(() => {
-          return () => null
-        });
-      },
-      init: () => {
-      }
-    }
-  }).then(function (remote) {
-    if(remote.fake) {
-      return remote;
-    }
-    const proxy = {
-      get: (arg)=>{
-        return remote.get(arg).then((f)=>{
-          const m = f();
-          return ()=>new Proxy(m, {
-            get: (target, prop)=>{
-              if(global.usedChunks) global.usedChunks.add(${JSON.stringify(
-                global
-              )} + "->" + arg);
-              return target[prop];
-            }
-          })
-        })
-      },
-      init: function(shareScope) {
-        const handler = {
-          get(target, prop) {
-            if (target[prop]) {
-              Object.values(target[prop]).forEach(function(o) {
-                if(o.from === '_N_E') {
-                  o.loaded = 1
-                }
-              })
-            }
-            return target[prop]
-          },
-          set(target, property, value) {
-            if(global.usedChunks) global.usedChunks.add(${JSON.stringify(
-              global
-            )} + "->" + property);
-            if (target[property]) {
-              return target[property]
-            }
-            target[property] = value
-            return true
-          }
-        }
-        try {
-          global.__remote_scope__[${JSON.stringify(
-            global
-          )}].init(new Proxy(shareScope, handler))
-        } catch (e) {
-
-        }
-        global.__remote_scope__[${JSON.stringify(global)}].__initialized = true
-      }
-    }
-    try  {
-      proxy.init(__webpack_require__.S.default)
-    } catch(e) {
-      console.error('failed to init', ${JSON.stringify(global)}, e)
-    }
-    return proxy
-  })`;
-
-export const parseRemoteSyntax = (remote: any) => {
-  if (typeof remote === 'string' && remote.includes('@')) {
-    const [url, global] = extractUrlAndGlobal(remote);
-    return generateRemoteTemplate(url, global);
-  }
-
-  return remote;
-};
-
+/**
+ * Class representing a NodeFederationPlugin.
+ * @class
+ */
 class NodeFederationPlugin {
   private _options: ModuleFederationPluginOptions;
   private context: Context;
-  private experiments: NodeFederationOptions['experiments'];
+  private useRuntimePlugin?: boolean;
 
+  /**
+   * Create a NodeFederationPlugin.
+   * @constructor
+   * @param {NodeFederationOptions} options - The options for the NodeFederationPlugin
+   * @param {Context} context - The context for the NodeFederationPlugin
+   */
   constructor(
-    { experiments, verbose, ...options }: NodeFederationOptions,
-    context: Context
+    { debug, useRuntimePlugin, ...options }: NodeFederationOptions,
+    context: Context,
   ) {
     this._options = options || ({} as ModuleFederationPluginOptions);
     this.context = context || ({} as Context);
-    this.experiments = experiments || {};
+    this.useRuntimePlugin = useRuntimePlugin || false;
   }
 
+  /**
+   * Apply method for the NodeFederationPlugin class.
+   * @method
+   * @param {Compiler} compiler - The webpack compiler.
+   */
   apply(compiler: Compiler) {
-    // When used with Next.js, context is needed to use Next.js webpack
     const { webpack } = compiler;
+    const pluginOptions = this.preparePluginOptions();
+    this.updateCompilerOptions(compiler);
+    const ModuleFederationPlugin = this.getModuleFederationPlugin(
+      compiler,
+      webpack,
+    );
+    new ModuleFederationPlugin(pluginOptions).apply(compiler);
+    new EntryChunkTrackerPlugin({}).apply(compiler);
+  }
 
-    // const defs = {
-    //   'process.env.REMOTES': runtime,
-    //   'process.env.REMOTE_CONFIG': hot,
-    // };
+  private preparePluginOptions(): ModuleFederationPluginOptions {
+    this._options.runtimePlugins = [
+      ...(this.useRuntimePlugin ? [require.resolve('../runtimePlugin')] : []),
+      ...(this._options.runtimePlugins || []),
+    ];
 
-    // new ((webpack && webpack.DefinePlugin) || require("webpack").DefinePlugin)(
-    //     defs
-    // ).apply(compiler);
-    const pluginOptions = {
+    return {
       ...this._options,
-      remotes: parseRemotes(
-        this._options.remotes || {}
-      ) as ModuleFederationPluginOptions['remotes'],
+      remotes: this._options.remotes || {},
+      runtimePlugins: this._options.runtimePlugins,
+      // enable dts in browser by default
+      dts: this._options.dts ?? false,
     };
+  }
 
-    new (this.context.ModuleFederationPlugin ||
-      (webpack && webpack.container.ModuleFederationPlugin) ||
-      require('webpack/lib/container/ModuleFederationPlugin'))(
-      pluginOptions
-    ).apply(compiler);
+  private updateCompilerOptions(compiler: Compiler): void {
+    const chunkFileName = compiler.options?.output?.chunkFilename;
+    const uniqueName =
+      compiler?.options?.output?.uniqueName || this._options.name;
+    if (
+      typeof chunkFileName === 'string' &&
+      uniqueName &&
+      !chunkFileName.includes(uniqueName)
+    ) {
+      const suffix = `-[chunkhash].js`;
+      compiler.options.output.chunkFilename = chunkFileName.replace(
+        '.js',
+        suffix,
+      );
+    }
+  }
+
+  private getModuleFederationPlugin(compiler: Compiler, webpack: any): any {
+    let ModuleFederationPlugin;
+    try {
+      return require('@module-federation/enhanced').ModuleFederationPlugin;
+    } catch (e) {
+      console.error(
+        "Can't find @module-federation/enhanced, falling back to webpack ModuleFederationPlugin, this may not work",
+      );
+      if (this.context.ModuleFederationPlugin) {
+        ModuleFederationPlugin = this.context.ModuleFederationPlugin;
+      } else if (
+        webpack &&
+        webpack.container &&
+        webpack.container.ModuleFederationPlugin
+      ) {
+        ModuleFederationPlugin = webpack.container.ModuleFederationPlugin;
+      } else {
+        ModuleFederationPlugin = require('webpack/lib/container/ModuleFederationPlugin');
+      }
+      return ModuleFederationPlugin;
+    }
   }
 }
 

@@ -1,0 +1,84 @@
+# Experiments
+
+The `experiments` configuration is used to enable experimental capabilities in the plugin.
+
+- Example
+
+```ts
+new ModuleFederationPlugin({
+  name: '@demo/host',
+  experiments: {
+    federationRuntime: 'hoisted'
+  },
+  shared: {
+    react: {
+      singleton: true,
+    },
+    'react-dom': {
+      singleton: true,
+    },
+  },
+  //...
+});
+```
+
+## federationRuntime
+
+- Type: `enum`
+- Required: No
+- Default: `false`
+- Options: `false | "hoisted"`
+
+### `Hoisted` Runtime
+
+When the runtime is `hoisted`, the following occurs:
+
+These configurations are useful for:
+
+- Setting or using`runtimeChunk: 'single'`.
+- Avoiding the `import()` at the top of the app or in the entry point of user code to prevent eager consumption errors. In the past, this was often mandatory and commonly seen as `import('./bootstrap.js')` in example apps.
+- Moving the Module Federation runtime packages into runtime chunks, keeping them out of the entry point - reducing code duplication
+
+1) Optimizations
+
+The `module-federation/runtime` is patched onto entrypoints. This causes multiple copies to exist in some builds.
+It also causes some "eager consumption" errors when chunk splitting is configured in certain ways.
+
+This resolves a common issue with runtimeChunk: single
+
+2) Async startup
+
+:::warning
+This mode allows for async startup. When exporting a UMD library, it can return a promise resolving to the export.
+If you manually require() an entrypoint in Node, it sets module.exports to Promise.resolve(exports).
+:::
+
+Entrypoint startup will switch to "active" initialization and use async dependency startup.
+
+You will no longer need a mandatory `import('./bootsrtap')` dynamic import in order for consumers / hosts to function.
+There should be no "eager consumption" errors possible, as the initialization of the files themselves behave as async chunks.
+
+3) Eager Runtime Access
+
+Instead of federation runtime initilizing in the entrypoint code, it is initialized in a RuntimeModule, within the webpack runtime.
+This allows module federation to be avaliable ahead of time, thus enabling "Async Startup" capabilities etc.
+
+## externalRuntime
+
+- Type: `boolean`
+- Required: No
+- Default: `false`
+
+After setting `true`, the external MF runtime will be used and the runtime provided by the consumer will be used. (Please make sure your consumer has `provideExternalRuntime: true` set, otherwise it will not run properly!)
+
+## provideExternalRuntime
+
+- Type: `boolean`
+- Required: No
+- Default: `false`
+
+::: warning note
+Make sure to only configure it on the topmost consumer! If multiple consumers inject runtime at the same time, the ones executed later will not overwrite the existing runtime.
+:::
+
+Setting `true` will inject the MF runtime at the consumer.

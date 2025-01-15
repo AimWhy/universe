@@ -1,0 +1,28 @@
+{
+  "name": "@module-federation/webpack-type",
+  "version": "0.0.1",
+  "license": "MIT",
+  "types": "./types.d.ts",
+  "type": "commonjs",
+  "description": "Webpack type for Module federation",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/module-federation/core.git",
+    "directory": "packages/runtime"
+  },
+  "author": "Zack Jackson <zackary.l.jackson@gmail.com>",
+  "contributors": [
+    "Pavel Chertorogov, nodkz <pavel.chertorogov@gmail.com> (www.ps.kz)"
+  ],
+  "exports": {
+    ".": "./types.d.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "enhanced-resolve": "^5.17.1",
+    "tapable": "^2.1.1"
+  },
+  "nx": {}
+}

@@ -1,16 +1,18 @@
 {
-  "name": "react-ts-host",
+  "name": "react_ts_host",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/react-ts-host/src",
   "projectType": "application",
+  "tags": [],
+  "implicitDependencies": ["typescript"],
   "targets": {
     "build": {
-      "executor": "@nrwl/webpack:webpack",
+      "executor": "@nx/webpack:webpack",
       "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
       "options": {
-        "compiler": "swc",
-        "outputPath": "dist/apps/react-ts-host",
+        "compiler": "babel",
+        "outputPath": "apps/react-ts-host/dist",
         "index": "apps/react-ts-host/src/index.html",
         "baseHref": "/",
         "main": "apps/react-ts-host/src/main.ts",
@@ -22,7 +24,8 @@
         ],
         "styles": [],
         "scripts": [],
-        "webpackConfig": "apps/react-ts-host/webpack.config.js"
+        "webpackConfig": "apps/react-ts-host/webpack.config.js",
+        "babelUpwardRootMode": true
       },
       "configurations": {
         "development": {
@@ -42,54 +45,58 @@
           "outputHashing": "all",
           "sourceMap": false,
           "namedChunks": false,
-          "extractLicenses": true,
-          "vendorChunk": false,
-          "webpackConfig": "apps/react-ts-host/webpack.config.prod.js"
+          "extractLicenses": false,
+          "vendorChunk": false
         }
-      }
+      },
+      "dependsOn": [
+        {
+          "target": "build",
+          "dependencies": true
+        }
+      ]
     },
     "serve": {
-      "executor": "@nrwl/react:module-federation-dev-server",
-      "defaultConfiguration": "development",
+      "executor": "@nx/webpack:dev-server",
+      "defaultConfiguration": "production",
       "options": {
-        "buildTarget": "react-ts-host:build",
+        "buildTarget": "react_ts_host:build",
         "hmr": true,
-        "port": 3003
+        "port": 3003,
+        "devRemotes": ["react_ts_remote"]
       },
       "configurations": {
         "development": {
-          "buildTarget": "react-ts-host:build:development"
+          "buildTarget": "react_ts_host:build:development"
         },
         "production": {
-          "buildTarget": "react-ts-host:build:production",
+          "buildTarget": "react_ts_host:build:production",
           "hmr": false
         }
       }
     },
     "lint": {
-      "executor": "@nrwl/linter:eslint",
+      "executor": "@nx/eslint:lint",
       "outputs": ["{options.outputFile}"],
       "options": {
         "lintFilePatterns": ["apps/react-ts-host/**/*.{ts,tsx,js,jsx}"]
       }
     },
     "serve-static": {
-      "executor": "@nrwl/web:file-server",
+      "executor": "@nx/web:file-server",
       "defaultConfiguration": "development",
       "options": {
-        "buildTarget": "react-ts-host:build",
+        "buildTarget": "react_ts_host:build",
         "port": 3003
       },
       "configurations": {
         "development": {
-          "buildTarget": "react-ts-host:build:development"
+          "buildTarget": "react_ts_host:build:development"
         },
         "production": {
-          "buildTarget": "react-ts-host:build:production"
+          "buildTarget": "react_ts_host:build:production"
         }
       }
     }
-  },
-  "tags": [],
-  "implicitDependencies": ["typescript"]
+  }
 }

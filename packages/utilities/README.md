@@ -1,5 +1,7 @@
 # utils
 
+For warning： [`@module-federation/runtime`](https://module-federation.io/guide/basic/runtime.html) is recommended as a replacement
+
 This library was generated with [Nx](https://nx.dev).
 
 ## Building
@@ -29,18 +31,11 @@ import { FederationBoundary } from '@module-federation/utilities/src/utils/react
 
 // defining dynamicImport and fallback outside the Component to keep the component identity
 // another alternative would be to use useMemo
-const dynamicImport = () =>
-  import('some_remote_host_name').then((m) => m.Component);
+const dynamicImport = () => import('some_remote_host_name').then((m) => m.Component);
 const fallback = () => import('@npm/backup').then((m) => m.Component);
 
 const MyPage = () => {
-  return (
-    <FederationBoundary
-      dynamicImporter={dynamicImport}
-      fallback={fallback}
-      customBoundary={CustomErrorBoundary}
-    />
-  );
+  return <FederationBoundary dynamicImporter={dynamicImport} fallback={fallback} customBoundary={CustomErrorBoundary} />;
 };
 ```
 
@@ -57,7 +52,9 @@ Usage looks something like this:
 ```js
 import { importRemote } from '@module-federation/utilities';
 
+// --
 // If it's a regular js module:
+// --
 importRemote({
   url: 'http://localhost:3001',
   scope: 'Foo',
@@ -66,16 +63,27 @@ importRemote({
   (
     {
       /* list of Bar exports */
-    }
+    },
   ) => {
     // Use Bar exports
-  }
+  },
 );
 
-// If Bar is a React component you can use it with lazy and Suspense just like a dynamic import:
-const Bar = lazy(() =>
-  importRemote({ url: 'http://localhost:3001', scope: 'Foo', module: 'Bar' })
+// --
+// If it's a ESM module (this is currently the default for NX):
+// --
+const Bar = lazy(() => importRemote({ url: 'http://localhost:3001', scope: 'Foo', module: 'Bar', esm: true }));
+
+return (
+  <Suspense fallback={<div>Loading Bar...</div>}>
+    <Bar />
+  </Suspense>
 );
+
+// --
+// If Bar is a React component you can use it with lazy and Suspense just like a dynamic import:
+// --
+const Bar = lazy(() => importRemote({ url: 'http://localhost:3001', scope: 'Foo', module: 'Bar' }));
 
 return (
   <Suspense fallback={<div>Loading Bar...</div>}>
@@ -96,10 +104,10 @@ importRemote({
   (
     {
       /* list of Bar exports */
-    }
+    },
   ) => {
     // Use Bar exports
-  }
+  },
 );
 
 // If Bar is a React component you can use it with lazy and Suspense just like a dynamic import:
@@ -108,7 +116,7 @@ const Bar = lazy(() =>
     url: () => MyAsyncMethod('remote_name'),
     scope: 'Foo',
     module: 'Bar',
-  })
+  }),
 );
 
 return (
@@ -130,9 +138,7 @@ const dynamicImporter = () =>
 const fallback = () => import('@npm/backup').then((m) => m.Component);
 
 const Bar = () => {
-  return (
-    <FederationBoundary dynamicImporter={dynamicImporter} fallback={fallback} />
-  );
+  return <FederationBoundary dynamicImporter={dynamicImporter} fallback={fallback} />;
 };
 ```
 

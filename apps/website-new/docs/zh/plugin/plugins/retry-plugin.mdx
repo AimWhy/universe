@@ -1,0 +1,207 @@
+import { PackageManagerTabs, Tabs, Tab } from '@theme';
+
+# 资源重试插件
+
+资源重试插件用于在资源加载失败时进行重试，以增加资源加载的成功率。在 Module Federation 中我们提供重试插件 `RetryPlugin` 来增加资源重试机制，这对于远程应用的加载来说可提高应用的稳定性。
+
+## 安装
+
+资源重试插件是由`@module-federation/retry-plugin` 包提供的，我们先来安装它
+
+<PackageManagerTabs
+  command={{
+    npm: 'npm add @module-federation/retry-plugin --save',
+    yarn: 'yarn add @module-federation/retry-plugin --save',
+    pnpm: 'pnpm add @module-federation/retry-plugin --save',
+    bun: 'bun add @module-federation/retry-plugin --save',
+  }}
+/>
+
+## 使用方法
+
+`RetryPlugin` 为运行时插件，我们可以通过构建插件的 `runtimePlugin` 注册此插件或在运行时进行插件注册，并配置重试参数和重试逻辑等：
+
+:::note
+注意
+
+- 构建插件中注册 和 运行时注册两种方式选择任意一种即可，不要重复注册
+- 推荐尽量在构建插件中注册，这样能将 RetryPlugin 插件注册时机尽可能提前，避免因资源请求失败导致项目无法启动，无法进入运行时进行重试插件的注册，从而无法进行资源重试
+
+:::
+
+
+### 方式一：构建插件中注册
+```diff
+import { pluginModuleFederation } from '@module-federation/rsbuild-plugin';
+import { defineConfig } from '@rsbuild/core';
+
+export default defineConfig({
+  plugins: [
+    pluginReact(),
+    pluginModuleFederation({
+      ...,
++     runtimePlugins: [
++       path.join(__dirname, './src/runtime-plugin/retry.ts'),
++     ],
+    }),
+  ],
+});
+
+```
+
+
+```ts
+// ./src/runtime-plugin/retry.ts
+import { RetryPlugin } from '@module-federation/retry-plugin';
+const retryPlugin = () => RetryPlugin({
+    fetch: {},
+    script: {}
+})
+export default retryPlugin;
+```
+
+### 方式二：运行时注册
+
+```ts
+import { init, loadRemote } from '@module-federation/enhanced/runtime';
+import { RetryPlugin } from '@module-federation/retry-plugin';
+
+init({
+  name: 'federation_consumer',
+  remotes: [],
+  plugins: [
+    RetryPlugin({
+      fetch: {},
+      script: {},
+    }),
+  ],
+});
+```
+
+需要重试的资源分为两种类型：fetch 类型和 script 类型，这两种资源类型我们分别通过 `fetch` 参数和 `script` 参数进行重试逻辑控制。
+
+## Type
+
+```ts
+const RetryPlugin: (params: RetryPluginParams) => FederationRuntimePlugin;
+
+type RetryPluginParams = {
+  fetch?: FetchWithRetryOptions; // fetch retry options
+  script?: ScriptWithRetryOptions; // script retry options
+};
+
+type FetchWithRetryOptions = {
+  url?: string;
+  options?: RequestInit;
+  retryTimes?: number;
+  retryDelay?: number;
+  fallback?: (url: string) => string;
+}
+
+type ScriptWithRetryOptions = {
+  retryTimes?: number;
+  retryDelay?: number;
+  moduleName?: Array<string>;
+  cb?: (resolve: (value: unknown) => void, error: any) => void;
+}
+
+```
+
+
+## RetryPluginParams 类型说明
+
+`RetryPluginParams` 是用于配置 `RetryPlugin` 的参数类型，包含了两种资源类型的重试选项：`fetch` 和 `script`。
+
+### 属性
+
+- **fetch**: `FetchWithRetryOptions`（可选）
+  - 用于配置 fetch 类型资源的重试选项。
+
+- **script**: `ScriptWithRetryOptions`（可选）
+  - 用于配置 script 类型资源的重试选项。
+
+### FetchWithRetryOptions 类型说明
+
+- **url**:
+  - `string`
+  - 可选。当不设置时对于所有加载失败的 URL 会默认进入重试逻辑
+  - 需要重试的资源的 URL。
+
+- **options**:
+  - `RequestInit`
+  - 可选
+  - 传递给 fetch 请求的选项。
+
+- **retryTimes**:
+  - `number`
+  - 可选
+  - 重试的次数，默认为 3。
+
+- **retryDelay**:
+  - `number`
+  - 可选
+  - 每次重试之间的延迟时间（毫秒）。
+
+- **fallback**:
+  - `() => string`
+  - 可选
+  - 所有重试失败后，返回一个备用资源的 URL。
+
+### ScriptWithRetryOptions 类型说明
+
+- **retryTimes**:
+  - `number`
+  - 可选
+  - 重试的次数，默认为 3。
+
+- **retryDelay**:
+  - `number`
+  - 可选
+  - 每次重试之间的延迟时间（毫秒）。
+
+- **moduleName**:
+  - `Array<string>`
+  - 可选
+  - 模块名称列表，值为模块名称或模块别名。用于标识需要重试的模块。如果不设置，则默认对所有加载失败的模块进行重试。
+
+- **cb**:
+  - `(resolve: (value: unknown) => void, error: any) => void`
+  - 可选
+  - 回调函数，重试失败后的回调
+
+完整的配置可参考如下配置：
+
+
+```ts
+import { init, loadRemote } from '@module-federation/enhanced/runtime';
+import { RetryPlugin } from '@module-federation/retry-plugin';
+
+init({
+  name: 'federation_consumer',
+  remotes: [],
+  plugins: [
+    RetryPlugin({
+      fetch: {
+        // the retry resource url
+        url: 'http://localhost:2001/-mf-manifest.json',
+        // after all retried failed, set a fallback function to guarantee a fallback resource
+        fallback: () => 'http://localhost:2002/mf-manifest.json',
+      },
+      script: {
+        // the retry times
+        retryTimes: 3,
+        // the retry delay
+        retryDelay: 1000,
+        // the module name list that need to be retried, defualt behavior is to retry all modules
+        moduleName: ['remote1'],
+        // the callback function that will be called after all retried failed
+        cb: (resolve, error) => {
+          return setTimeout(() => {
+            resolve(error);
+          }, 2000);
+        },
+      },
+    }),
+  ],
+});
+```

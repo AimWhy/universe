@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import App from 'next/app';
-import { Layout, version } from 'antd';
-import { useRouter } from 'next/router';
-
-import SharedNav from '../components/SharedNav';
-import HostAppMenu from '../components/menu';
-import 'antd/dist/antd.css';
 import * as React from 'react';
-import Router from 'next/router';
+import { useState } from 'react';
+import { init } from '@module-federation/runtime';
+console.log('logging init', typeof init);
+import App from 'next/app';
+import { Layout, version, ConfigProvider } from 'antd';
+import { StyleProvider } from '@ant-design/cssinjs';
 
+import Router, { useRouter } from 'next/router';
+const SharedNav = React.lazy(() => import('../components/SharedNav'));
+import HostAppMenu from '../components/menu';
 function MyApp(props) {
   const { Component, pageProps } = props;
   const { asPath } = useRouter();
@@ -27,7 +27,9 @@ function MyApp(props) {
     }
   };
   // handle first route hit.
-  React.useMemo(() => handleRouteChange(asPath), []);
+  React.useEffect(() => {
+    handleRouteChange(asPath);
+  }, [asPath]);
 
   //handle route change
   React.useEffect(() => {
@@ -37,26 +39,35 @@ function MyApp(props) {
       Router.events.off('routeChangeStart', handleRouteChange);
     };
   }, []);
-
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <SharedNav />
-      <Layout>
-        <Layout.Sider width={200}>
-          <MenuComponent />
-        </Layout.Sider>
-        <Layout>
-          <Layout.Content style={{ background: '#fff', padding: 20 }}>
-            <Component {...pageProps} />
-          </Layout.Content>
-          <Layout.Footer
-            style={{ background: '#fff', color: '#999', textAlign: 'center' }}
-          >
-            antd@{version}
-          </Layout.Footer>
+    <StyleProvider layer>
+      <ConfigProvider theme={{ hashed: false }}>
+        <Layout style={{ minHeight: '100vh' }} prefixCls={'dd'}>
+          <React.Suspense>
+            <SharedNav />
+          </React.Suspense>
+          <Layout>
+            <Layout.Sider width={200}>
+              <MenuComponent />
+            </Layout.Sider>
+            <Layout>
+              <Layout.Content style={{ background: '#fff', padding: 20 }}>
+                <Component {...pageProps} />
+              </Layout.Content>
+              <Layout.Footer
+                style={{
+                  background: '#fff',
+                  color: '#999',
+                  textAlign: 'center',
+                }}
+              >
+                antd@{version}
+              </Layout.Footer>
+            </Layout>
+          </Layout>
         </Layout>
-      </Layout>
-    </Layout>
+      </ConfigProvider>
+    </StyleProvider>
   );
 }
 

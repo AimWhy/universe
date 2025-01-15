@@ -3,24 +3,29 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/3001-shop",
   "projectType": "application",
+  "tags": [],
   "targets": {
     "build": {
-      "executor": "@nrwl/next:build",
-      "outputs": ["{options.outputPath}"],
+      "executor": "@nx/next:build",
       "defaultConfiguration": "production",
       "options": {
-        "root": "apps/3001-shop",
-        "outputPath": "dist/apps/3001-shop"
+        "outputPath": "apps/3001-shop"
       },
       "configurations": {
         "development": {
-          "outputPath": "dist/apps/3001-shop"
+          "outputPath": "apps/3001-shop"
         },
         "production": {}
-      }
+      },
+      "dependsOn": [
+        {
+          "target": "build",
+          "dependencies": true
+        }
+      ]
     },
     "serve": {
-      "executor": "@nrwl/next:server",
+      "executor": "@nx/next:server",
       "defaultConfiguration": "development",
       "options": {
         "buildTarget": "3001-shop:build",
@@ -38,21 +43,55 @@
           "dev": false,
           "port": 3001
         }
-      }
+      },
+      "dependsOn": [
+        {
+          "target": "build",
+          "dependencies": true
+        }
+      ]
     },
     "export": {
-      "executor": "@nrwl/next:export",
+      "executor": "@nx/next:export",
       "options": {
         "buildTarget": "3001-shop:build:production"
       }
     },
     "lint": {
-      "executor": "@nrwl/linter:eslint",
+      "executor": "@nx/eslint:lint",
       "outputs": ["{options.outputFile}"],
       "options": {
         "lintFilePatterns": ["apps/3001-shop/**/*.{ts,tsx,js,jsx}"]
       }
+    },
+    "test:e2e": {
+      "executor": "nx:run-commands",
+      "options": {
+        "parallel": true,
+        "commands": [
+          {
+            "command": "lsof -i :3001 || nx run 3001-shop:serve",
+            "forwardAllArgs": false
+          },
+          {
+            "command": "sleep 10 && nx run 3001-shop:e2e",
+            "forwardAllArgs": true
+          }
+        ]
+      }
+    },
+    "e2e": {
+      "executor": "@nx/cypress:cypress",
+      "options": {
+        "cypressConfig": "apps/3001-shop/cypress.config.ts",
+        "testingType": "e2e",
+        "baseUrl": "http://localhost:3001"
+      },
+      "configurations": {
+        "production": {
+          "devServerTarget": "3001-shop:serve:production"
+        }
+      }
     }
-  },
-  "tags": []
+  }
 }

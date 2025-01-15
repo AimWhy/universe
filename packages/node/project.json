@@ -3,60 +3,58 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/node/src",
   "projectType": "library",
+  "tags": ["type:pkg"],
   "targets": {
     "build": {
-      "executor": "@nrwl/js:tsc",
+      "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "dist/packages/node",
+        "outputPath": "packages/node/dist",
         "main": "packages/node/src/index.js",
         "tsConfig": "packages/node/tsconfig.lib.json",
-        "updateBuildableProjectDepsInPackageJson": true,
-        "buildableProjectDepsInPackageJsonType": "dependencies",
         "assets": ["packages/node/*.md"]
-      }
-    },
-    "publish": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "node tools/scripts/publish.mjs node {args.ver} {args.tag}"
       },
       "dependsOn": [
         {
-          "projects": "self",
-          "target": "build"
+          "target": "build",
+          "dependencies": true
         }
       ]
     },
     "lint": {
-      "executor": "@nrwl/linter:eslint",
+      "executor": "@nx/eslint:lint",
       "outputs": ["{options.outputFile}"],
       "options": {
-        "lintFilePatterns": ["packages/node/**/*.js"]
+        "lintFilePatterns": ["packages/node/**/*.js", "packages/node/**/*.ts"]
       }
     },
-    "version": {
-      "executor": "@jscutlery/semver:version",
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/packages/node"],
       "options": {
-        "postTargets": ["node:npm", "node:github"],
-        "trackDeps": true,
-        "push": true
+        "jestConfig": "packages/node/jest.config.js",
+        "passWithNoTests": true
       }
     },
-    "github": {
-      "executor": "@jscutlery/semver:github",
+    "pre-release": {
+      "executor": "nx:run-commands",
       "options": {
-        "tag": "${tag}",
-        "notes": "${notes}"
-      }
-    },
-    "npm": {
-      "executor": "ngx-deploy-npm:deploy",
-      "options": {
-        "access": "public"
+        "parallel": false,
+        "commands": [
+          {
+            "command": "nx run node:test",
+            "forwardAllArgs": false
+          },
+          {
+            "command": "nx run node:build",
+            "forwardAllArgs": false
+          },
+          {
+            "command": "rm ./packages/node/dist/package.json",
+            "forwardAllArgs": false
+          }
+        ]
       }
     }
-  },
-  "tags": [],
-  "implicitDependencies": ["utils"]
+  }
 }

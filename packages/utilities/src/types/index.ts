@@ -1,17 +1,17 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../../../../node_modules/webpack/module.d.ts" />
+import type { moduleFederationPlugin } from '@module-federation/sdk';
 
 import type { container, WebpackOptionsNormalized } from 'webpack';
 
-export type ModuleFederationPluginOptions = ConstructorParameters<
-  typeof container.ModuleFederationPlugin
->['0'];
+export type ModuleFederationPluginOptions =
+  moduleFederationPlugin.ModuleFederationPluginOptions;
 
 export type WebpackRequire = {
   l: (
     url: string | undefined,
     cb: (event: any) => void,
-    id: string | number
+    id: string | number,
   ) => Record<string, unknown>;
 };
 
@@ -24,9 +24,15 @@ export type WebpackShareScopes = Record<
 > & {
   default?: string;
 };
+export type GlobalScopeType = {
+  [K: string]: any;
+  _config?: Record<string | number, any>;
+  _medusa?: Record<string, any> | undefined;
+  remoteLoading?: Record<string, Promise<AsyncContainer>>;
+};
 
 export declare const __webpack_init_sharing__: (
-  parameter: string
+  parameter: string,
 ) => Promise<void>;
 
 export interface NextFederationPluginExtraOptions {
@@ -35,7 +41,7 @@ export interface NextFederationPluginExtraOptions {
   exposePages?: boolean;
   skipSharingNextInternals?: boolean;
   automaticPageStitching?: boolean;
-  automaticAsyncBoundary?: boolean;
+  debug?: boolean;
 }
 
 export interface NextFederationPluginOptions
@@ -72,6 +78,8 @@ export type RemoteData = {
 
 export type RuntimeRemote = Partial<RemoteData> & {
   asyncContainer?: AsyncContainer;
+  global?: string;
+  url?: string;
 };
 
 export type RuntimeRemotesMap = Record<string, RuntimeRemote>;
@@ -92,3 +100,10 @@ export type GetModuleOptions = {
   exportName?: string;
   remoteContainer: string | RemoteData;
 };
+
+export type RemoteVars = Record<
+  string,
+  | Promise<WebpackRemoteContainer>
+  | string
+  | (() => Promise<WebpackRemoteContainer>)
+>;

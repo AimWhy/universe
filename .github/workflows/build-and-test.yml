@@ -1,0 +1,111 @@
+name: Build Affected Packages
+
+on:
+  pull_request:
+    branches: [main, '**']
+  push:
+    branches: [main]
+
+jobs:
+  checkout-install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Pnpm
+        run: corepack enable
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Set Nx SHA
+        uses: nrwl/nx-set-shas@v3
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Install Cypress
+        run: npx cypress install
+
+      - name: Check Code Format
+        run: npx nx format:check
+
+      - name: Warm Nx Cache
+        run: npx nx run-many --targets=build --projects=tag:type:pkg
+
+      - name: Run Build for All
+        run: npx nx run-many --targets=build --projects=tag:type:pkg --skip-nx-cache
+
+      - name: Check Package Publishing Compatibility
+        run: |
+          for pkg in packages/*; do
+            if [ -f "$pkg/package.json" ] && \
+               [ "$pkg" != "packages/assemble-release-plan" ] && \
+               [ "$pkg" != "packages/chrome-devtools" ] && \
+               [ "$pkg" != "packages/core" ] && \
+               [ "$pkg" != "packages/esbuild" ] && \
+               [ "$pkg" != "packages/utilities" ]; then
+              echo "Checking $pkg..."
+              npx publint "$pkg"
+            fi
+          done
+
+      - name: Run Affected Test
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 2
+          timeout_minutes: 10
+          command: npx nx affected -t test --parallel=3 --exclude='*,!tag:type:pkg' --skip-nx-cache
+
+      - name: Run Affected Experimental Tests
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 2
+          timeout_minutes: 10
+          command: npx nx affected -t test:experiments --parallel=1 --exclude='*,!tag:type:pkg' --skip-nx-cache
+
+  e2e-modern:
+    needs: checkout-install
+    uses: ./.github/workflows/e2e-modern.yml
+    secrets: inherit
+
+  e2e-runtime:
+    needs: checkout-install
+    uses: ./.github/workflows/e2e-runtime.yml
+    secrets: inherit
+
+  e2e-manifest:
+    needs: checkout-install
+    uses: ./.github/workflows/e2e-manifest.yml
+    secrets: inherit
+
+  e2e-node:
+    needs: checkout-install
+    uses: ./.github/workflows/e2e-node.yml
+    secrets: inherit
+
+  e2e-next-dev:
+    needs: checkout-install
+    uses: ./.github/workflows/e2e-next-dev.yml
+    secrets: inherit
+
+  e2e-next-prod:
+    needs: checkout-install
+    uses: ./.github/workflows/e2e-next-prod.yml
+    secrets: inherit
+
+  e2e-modern-ssr:
+    needs: checkout-install
+    uses: ./.github/workflows/e2e-modern-ssr.yml
+    secrets: inherit
+
+  e2e-router:
+    needs: checkout-install
+    uses: ./.github/workflows/e2e-router.yml
+    secrets: inherit

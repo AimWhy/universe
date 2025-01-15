@@ -1,9 +1,8 @@
-const { withNx } = require('@nrwl/next/plugins/with-nx');
-const { createDelegatedModule } = require('@module-federation/utilities');
+const { withNx } = require('@nx/next/plugins/with-nx');
 const NextFederationPlugin = require('@module-federation/nextjs-mf');
 
 /**
- * @type {import('@nrwl/next/plugins/with-nx').WithNxOptions}
+ * @type {import('@nx/next/plugins/with-nx').WithNxOptions}
  **/
 const nextConfig = {
   nx: {
@@ -11,23 +10,20 @@ const nextConfig = {
     // See: https://github.com/gregberge/svgr
     svgr: false,
   },
-
   webpack(config, options) {
     const { isServer } = options;
-
+    config.watchOptions = {
+      ignored: ['**/node_modules/**', '**/@mf-types/**'],
+    };
+    // used for testing build output snapshots
     const remotes = {
-      shop: createDelegatedModule(require.resolve('./remote-delegate.js'), {
-        remote: `shop@http://localhost:3001/_next/static/${
-          isServer ? 'ssr' : 'chunks'
-        }/remoteEntry.js`,
-      }),
-      // checkout: createDelegatedModule(require.resolve('./remote-delegate.js'), {
-      //   remote: `checkout@http://localhost:3002/_next/static/${isServer ? 'ssr' : 'chunks'}/remoteEntry.js`,
-      // }),
-      // shop: `shop@http://localhost:3001/_next/static/${
-      //   isServer ? 'ssr' : 'chunks'
-      // }/remoteEntry.js`,
       checkout: `checkout@http://localhost:3002/_next/static/${
+        isServer ? 'ssr' : 'chunks'
+      }/remoteEntry.js`,
+      home_app: `home_app@http://localhost:3000/_next/static/${
+        isServer ? 'ssr' : 'chunks'
+      }/remoteEntry.js`,
+      shop: `shop@http://localhost:3001/_next/static/${
         isServer ? 'ssr' : 'chunks'
       }/remoteEntry.js`,
     };
@@ -45,19 +41,29 @@ const nextConfig = {
           './menu': './components/menu',
         },
         shared: {
-          lodash: {},
-          antd: {},
+          'lodash/': {},
+          antd: {
+            requiredVersion: '5.19.1',
+            version: '5.19.1',
+          },
+          '@ant-design/': {
+            singleton: true,
+          },
         },
         extraOptions: {
-          automaticAsyncBoundary: true,
+          debug: false,
           exposePages: true,
           enableImageLoaderFix: true,
           enableUrlLoaderFix: true,
-          skipSharingNextInternals: false,
-          automaticPageStitching: false,
         },
-      })
+      }),
     );
+    config.plugins.push({
+      name: 'xxx',
+      apply(compiler) {
+        compiler.options.devtool = false;
+      },
+    });
     return config;
   },
 };

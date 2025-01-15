@@ -7,9 +7,9 @@
  * You might need to authenticate with NPM before running this script.
  */
 
-import { readCachedProjectGraph } from '@nrwl/devkit';
-import { execSync } from 'child_process';
-import { readFileSync, writeFileSync } from 'fs';
+import { readCachedProjectGraph } from '@nx/devkit';
+import { execSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
 import chalk from 'chalk';
 
 function invariant(condition, message) {
@@ -27,7 +27,7 @@ const [, , name, version, tag = 'next'] = process.argv;
 const validVersion = /^\d+\.\d+\.\d+(-\w+\.\d+)?/;
 invariant(
   version && validVersion.test(version),
-  `No version provided or version did not match Semantic Versioning, expected: #.#.#-tag.# or #.#.#, got ${version}.`
+  `No version provided or version did not match Semantic Versioning, expected: #.#.#-tag.# or #.#.#, got ${version}.`,
 );
 
 const graph = readCachedProjectGraph();
@@ -35,13 +35,13 @@ const project = graph.nodes[name];
 
 invariant(
   project,
-  `Could not find project "${name}" in the workspace. Is the project.json configured correctly?`
+  `Could not find project "${name}" in the workspace. Is the project.json configured correctly?`,
 );
 
 const outputPath = project.data?.targets?.build?.options?.outputPath;
 invariant(
   outputPath,
-  `Could not find "build.options.outputPath" of project "${name}". Is project.json configured  correctly?`
+  `Could not find "build.options.outputPath" of project "${name}". Is project.json configured  correctly?`,
 );
 
 process.chdir(outputPath);
@@ -53,7 +53,9 @@ try {
   writeFileSync(`package.json`, JSON.stringify(json, null, 2));
 } catch (e) {
   console.error(
-    chalk.bold.red(`Error reading package.json file from library build output.`)
+    chalk.bold.red(
+      `Error reading package.json file from library build output.`,
+    ),
   );
 }
 

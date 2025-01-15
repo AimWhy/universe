@@ -1,0 +1,19 @@
+{
+  "name": "3008-runtime-remote",
+  "private": true,
+  "version": "1.0.44",
+  "scripts": {
+    "dev": "rsbuild dev",
+    "build": "rsbuild build",
+    "preview": "rsbuild preview"
+  },
+  "dependencies": {
+    "@module-federation/enhanced": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "^1.0.19",
+    "@rsbuild/plugin-react": "^1.0.6"
+  }
+}

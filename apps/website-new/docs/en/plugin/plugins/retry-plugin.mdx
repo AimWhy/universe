@@ -1,0 +1,208 @@
+import { PackageManagerTabs, Tabs, Tab } from '@theme';
+
+# Resource Retry Plugin
+
+ resource retry plugin is used to retry resources when they fail to load, thereby increasing the success rate of resource loading. In Module Federation, we provide the retry plugin `RetryPlugin` to increase the retry mechanism for remote applications, which can improve the stability of the application.
+
+## Installation
+resource retry plugin is provided by the `@module-federation/retry-plugin` package. Let's install it first.
+
+<PackageManagerTabs
+  command={{
+    npm: 'npm add @module-federation/retry-plugin --save',
+    yarn: 'yarn add @module-federation/retry-plugin --save',
+    pnpm: 'pnpm add @module-federation/retry-plugin --save',
+    bun: 'bun add @module-federation/retry-plugin --save',
+  }}
+/>
+
+## Usage
+
+`RetryPlugin` is a runtime plugin, and we can register this plugin through the `runtimePlugin` of the build plugin or register it at runtime and configure retry parameters and retry logic, etc.:
+
+:::note
+
+Attention
+
+- build plugin registration and runtime registration are optional. You can choose either one, but not both.
+- It is recommended to register the RetryPlugin as early as possible in the build plugin to avoid the failure of resource requests, which may cause the project to fail to start and cannot enter the runtime to register the retry plugin, thus failing to retry resources.
+
+:::
+
+
+### The first way: register in the build plugin
+
+```diff
+import { pluginModuleFederation } from '@module-federation/rsbuild-plugin';
+import { defineConfig } from '@rsbuild/core';
+
+export default defineConfig({
+  plugins: [
+    pluginReact(),
+    pluginModuleFederation({
+      ...,
++     runtimePlugins: [
++       path.join(__dirname, './src/runtime-plugin/retry.ts'),
++     ],
+    }),
+  ],
+});
+
+```
+
+
+```ts
+// ./src/runtime-plugin/retry.ts
+import { RetryPlugin } from '@module-federation/retry-plugin';
+const retryPlugin = () => RetryPlugin({
+    fetch: {},
+    script: {}
+})
+export default retryPlugin;
+```
+
+### The Second way: register at runtime
+
+```ts
+import { init, loadRemote } from '@module-federation/enhanced/runtime';
+import { RetryPlugin } from '@module-federation/retry-plugin';
+
+init({
+  name: 'federation_consumer',
+  remotes: [],
+  plugins: [
+    RetryPlugin({
+      fetch: {},
+      script: {},
+    }),
+  ],
+});
+```
+
+the resources that need to be retried are divided into two types: fetch type and script type. We control the retry logic of these two resource types respectively through the `fetch` parameter and the `script` parameter.
+
+## Type
+
+```ts
+const RetryPlugin: (params: RetryPluginParams) => FederationRuntimePlugin;
+
+type RetryPluginParams = {
+  fetch?: FetchWithRetryOptions; // fetch retry options
+  script?: ScriptWithRetryOptions; // script retry options
+};
+
+type FetchWithRetryOptions = {
+  url?: string;
+  options?: RequestInit;
+  retryTimes?: number;
+  retryDelay?: number;
+  fallback?:
+    | (() => string)
+    | ((url: string | URL | globalThis.Request) => string);
+}
+
+type ScriptWithRetryOptions = {
+  retryTimes?: number;
+  retryDelay?: number;
+  moduleName?: Array<string>;
+  cb?: (resolve: (value: unknown) => void, error: any) => void;
+}
+
+```
+
+## RetryPluginParams Type Description
+
+`RetryPluginParams` is the parameter type used to configure the `RetryPlugin`, which contains retry options for two types of resources: `fetch` and `script`.
+
+### Properties
+
+- **fetch**: `FetchWithRetryOptions` (optional)
+  - `FetchWithRetryOptions` is the type used to configure the retry options for fetch type resources.
+
+- **script**: `ScriptWithRetryOptions` (optional)
+  - `ScriptWithRetryOptions` is the type used to configure the retry options for script type resources.
+
+### FetchWithRetryOptions Type Description
+
+- **url**:
+  - `string`
+  - optional, when not set, all failed URLs will enter the retry logic by default
+  - The URL of the resource that needs to be retried.
+
+- **options**:
+  - `RequestInit`
+  - optional
+  - Options passed to the fetch request.
+
+- **retryTimes**:
+  - `number`
+  - Options
+  - The number of retries, default is 3.
+
+- **retryDelay**:
+  - `number`
+  - optional
+  - The delay time between each retry (in milliseconds), default is 1000 (1 second).
+
+- **fallback**:
+  - `() => string | ((url: string | URL | globalThis.Request) => string)`
+  - optional
+  - A function, which can optionally receive the failed URL, that returns a fallback string to be used if all retries fail. This function is called when all retry attempts have failed.
+
+### ScriptWithRetryOptions Description
+
+- **retryTimes**:
+  - `number`
+  - optional
+  - The number of retries, default is 3.
+
+- **retryDelay**:
+  - `number`
+  - optional
+  - The delay time between each retry (in milliseconds), default is 1000 (1 second).
+
+- **moduleName**:
+  - `Array<string>`
+  - optional
+  - module name list, the value is the module name or module alias. Used to identify the module that needs to be retried. If not set, it defaults to retrying all modules that failed to load.
+
+- **cb**:
+  - `(resolve: (value: unknown) => void, error: any) => void`
+  - optional
+  - Callback function, callback after retry failure
+
+the complete configuration can be referred to as follows:
+
+```ts
+import { init, loadRemote } from '@module-federation/enhanced/runtime';
+import { RetryPlugin } from '@module-federation/retry-plugin';
+
+init({
+  name: 'federation_consumer',
+  remotes: [],
+  plugins: [
+    RetryPlugin({
+      fetch: {
+        // the retry resource url
+        url: 'http://localhost:2001/-mf-manifest.json',
+        // after all retried failed, set a fallback function to guarantee a fallback resource
+        fallback: (url: string) => 'http://localhost:2002/mf-manifest.json',
+      },
+      script: {
+        // the retry times
+        retryTimes: 3,
+        // the retry delay
+        retryDelay: 1000,
+        // the module name list that need to be retried, default behavior is to retry all modules
+        moduleName: ['remote1'],
+        // the callback function that will be called after all retried failed
+        cb: (resolve, error) => {
+          return setTimeout(() => {
+            resolve(error);
+          }, 2000);
+        },
+      },
+    }),
+  ],
+});
+```

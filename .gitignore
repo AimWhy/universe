@@ -5,7 +5,8 @@
 /tmp
 /out-tsc
 /build
-
+/docs
+/.nx
 # dependencies
 node_modules
 
@@ -41,3 +42,32 @@ Thumbs.db
 
 # Next.js
 .next
+.netlify
+migrations.json
+
+# build contnt
+packages/**/dist
+apps/**/dist
+
+**/@mf-types/**
+**/cypress/downloads
+
+# test cases
+!packages/enhanced/test/configCases/**/**/node_modules
+packages/enhanced/test/js
+.ignored
+**/.mf
+**/.mf/**
+
+# dts test cases
+**/dist-test
+**/cache
+**/cache/**
+**/dist-test/**
+**/cypress/downloads
+/packages/data-prefetch/jest/cache/
+
+# storybook cases
+!apps/rslib-module/@mf-types/**
+
+**/vite.config.{js,ts,mjs,mts,cjs,cts}.timestamp*

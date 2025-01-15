@@ -1,0 +1,67 @@
+{
+  "name": "@module-federation/native-federation-tests",
+  "version": "0.6.0",
+  "description": "Bundler agnostic unplugin to share federated tests",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./rollup": {
+      "types": "./dist/rollup.d.ts",
+      "require": "./dist/rollup.js",
+      "import": "./dist/rollup.mjs"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "require": "./dist/vite.js",
+      "import": "./dist/vite.mjs"
+    },
+    "./webpack": {
+      "types": "./dist/webpack.d.ts",
+      "require": "./dist/webpack.js",
+      "import": "./dist/webpack.mjs"
+    },
+    "./esbuild": {
+      "types": "./dist/esbuild.d.ts",
+      "require": "./dist/esbuild.js",
+      "import": "./dist/esbuild.mjs"
+    },
+    "./rspack": {
+      "types": "./dist/rspack.d.ts",
+      "require": "./dist/rspack.js",
+      "import": "./dist/rspack.mjs"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "keywords": [
+    "module federation",
+    "tests",
+    "remote tests",
+    "federated tests"
+  ],
+  "author": "Matteo Pietro Dazzi <matteopietro.dazzi@gmail.com> (https://github.com/ilteoood)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/module-federation/core/",
+    "directory": "packages/native-federation-tests"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "adm-zip": "^0.5.14",
+    "ansi-colors": "^4.1.3",
+    "axios": "^1.7.2",
+    "rambda": "^9.2.1",
+    "tsup": "^8.1.0",
+    "unplugin": "^1.10.1"
+  }
+}

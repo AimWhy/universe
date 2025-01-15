@@ -1,0 +1,8 @@
+{
+  "name": "node-remote",
+  "private": true,
+  "dependencies": {
+    "@module-federation/enhanced": "workspace:*",
+    "@module-federation/node": "workspace:*"
+  }
+}
